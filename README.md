@@ -1,4 +1,4 @@
-# Project Title: aesi-mrp-pilot
+# Project Title: AESI-MRP-PILOT 
 
 ## Overview
 The **aesi-mrp-pilot** project is designed to provide a seamless integration of multiple components for managing various aspects of the application, including backend services, frontend user interfaces, testing frameworks, documentation, scripting utilities, and Azure integration.
