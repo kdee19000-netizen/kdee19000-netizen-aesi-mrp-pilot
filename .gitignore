@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.$py.class
+
+# Docker
+*.dockerignore
+Dockerfile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Keys
+*.pem
+*.key
