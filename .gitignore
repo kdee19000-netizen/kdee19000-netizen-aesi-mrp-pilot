@@ -2,26 +2,6 @@
 __pycache__/
 *.py[cod]
 *.$py.class
-*.pyc
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Logs
-*.log
 
 # Docker
 *.dockerignore
@@ -31,22 +11,7 @@ Dockerfile
 .vscode/
 .idea/
 *.swp
-*.swo
-*~
 
 # Keys
 *.pem
 *.key
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Streamlit
-.streamlit/
-
-# Environment
-.env
-.venv
-venv/
-env/
