@@ -15,6 +15,3 @@ Dockerfile
 # Keys
 *.pem
 *.key
-
-# SQLite databases
-*.db
