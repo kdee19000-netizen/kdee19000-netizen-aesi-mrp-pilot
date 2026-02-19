@@ -14,6 +14,8 @@ class AIRiskType(str, Enum):
 
 
 class AIGovernanceDomain:
+    _CRITICAL_RISK_TYPES = [AIRiskType.UNSAFE_OUTPUT, AIRiskType.HARMFUL_INSTRUCTION, AIRiskType.PRIVACY_LEAK]
+
     @staticmethod
     def get_risk_patterns() -> Dict[AIRiskType, List[str]]:
         """Patterns detected in MODEL OUTPUT (not user input)"""
@@ -122,14 +124,8 @@ class AIGovernanceDomain:
     @staticmethod
     def get_action_required(risks: List[AIRiskType]) -> List[str]:
         """Define remediation actions"""
-        critical_risks = [
-            AIRiskType.UNSAFE_OUTPUT,
-            AIRiskType.HARMFUL_INSTRUCTION,
-            AIRiskType.PRIVACY_LEAK
-        ]
-
         actions = []
-        if any(risk in critical_risks for risk in risks):
+        if any(risk in AIGovernanceDomain._CRITICAL_RISK_TYPES for risk in risks):
             actions.extend([
                 "immediate_model_review",
                 "safety_filter_update",
@@ -149,8 +145,17 @@ class AIGovernanceDomain:
         return actions
 
     @staticmethod
+    def get_safe_response(risk_type: AIRiskType) -> str:
+        return AIGovernanceDomain.get_safe_fallback(risk_type)
+
+    @staticmethod
+    def assign_responder(risk_type: AIRiskType) -> str:
+        if risk_type in AIGovernanceDomain._CRITICAL_RISK_TYPES:
+            return "ai_safety_team"
+        return "ai_governance_reviewer"
+
+    @staticmethod
     def get_timeout_minutes(risk_type: AIRiskType) -> int:
-        critical = [AIRiskType.UNSAFE_OUTPUT, AIRiskType.HARMFUL_INSTRUCTION, AIRiskType.PRIVACY_LEAK]
-        if risk_type in critical:
+        if risk_type in AIGovernanceDomain._CRITICAL_RISK_TYPES:
             return 15  # 15 minutes for critical
         return 60  # 1 hour for other issues
