@@ -29,9 +29,17 @@ class CommerceSafetyDomain:
                 "can't log in", "password changed", "locked out",
                 "someone accessed my account", "hacked"
             ],
+            CommerceRiskType.PAYMENT_DISPUTE: [
+                "wrong amount charged", "billing error", "double charged",
+                "dispute charge", "incorrect charge"
+            ],
             CommerceRiskType.THREATENING_CUSTOMER: [
                 "find you", "you'll regret", "come to your house",
                 "threatening messages", "harassing"
+            ],
+            CommerceRiskType.ABUSIVE_SELLER: [
+                "seller threatening", "seller harassing", "rude seller",
+                "seller abusing", "abusive vendor"
             ],
             CommerceRiskType.UNSAFE_PRODUCT: [
                 "product caught fire", "chemical burn", "child injured",

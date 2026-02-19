@@ -40,8 +40,24 @@ class AIGovernanceDomain:
             AIRiskType.JAILBREAK_ATTEMPT: [
                 "ignore previous instructions", "system prompt is",
                 "bypass safety", "pretend you're not AI"
+            ],
+            AIRiskType.MISINFORMATION: [
+                "false information", "fake news", "spread misinformation",
+                "fabricated claim", "disinformation"
+            ],
+            AIRiskType.MANIPULATION: [
+                "psychologically manipulate", "emotionally coerce", "exploit vulnerability",
+                "gaslight", "manipulate user"
             ]
         }
+
+    @staticmethod
+    def get_safe_response(risk_type: AIRiskType) -> str:
+        return AIGovernanceDomain.get_safe_fallback(risk_type)
+
+    @staticmethod
+    def assign_responder(risk_type: AIRiskType) -> str:
+        return "ai_safety_team"
 
     @staticmethod
     def intercept_unsafe_output(model_output: str, user_query: str) -> Dict:
