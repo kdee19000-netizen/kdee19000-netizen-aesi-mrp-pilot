@@ -149,6 +149,14 @@ class AIGovernanceDomain:
         return actions
 
     @staticmethod
+    def get_safe_response(risk_type: AIRiskType) -> str:
+        return AIGovernanceDomain.get_safe_fallback(risk_type)
+
+    @staticmethod
+    def assign_responder(risk_type: AIRiskType) -> str:
+        return "ai_safety_team"
+
+    @staticmethod
     def get_timeout_minutes(risk_type: AIRiskType) -> int:
         critical = [AIRiskType.UNSAFE_OUTPUT, AIRiskType.HARMFUL_INSTRUCTION, AIRiskType.PRIVACY_LEAK]
         if risk_type in critical:
