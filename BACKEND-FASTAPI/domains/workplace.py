@@ -48,6 +48,10 @@ class WorkplaceSafetyDomain:
             WorkplaceRiskType.SAFETY_VIOLATION: [
                 "unsafe conditions", "no safety equipment", "accident waiting to happen",
                 "OSHA violation", "dangerous workplace"
+            ],
+            WorkplaceRiskType.WAGE_THEFT: [
+                "unpaid overtime", "missing wages", "wage theft", "not paid",
+                "withheld pay", "stolen wages"
             ]
         }
 
