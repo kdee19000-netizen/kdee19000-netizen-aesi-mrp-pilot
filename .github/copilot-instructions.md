@@ -69,7 +69,7 @@ class MyDomain:
 
 ### Anonymous Reporting
 
-- When `anonymous=True`, `AnonymousReportService.create_anonymous_case()` (in `domains/workplace.py`) generates a `anonymous_id` using **SHA-256** over a random 16-byte token combined with the current timestamp, then truncates to 16 hex characters. A separate URL-safe `tracking_code` is returned to the user for follow-up.
+- When `anonymous=True`, `AnonymousReportService.create_anonymous_case()` (in `domains/workplace.py`) generates an `anonymous_id` using **SHA-256** over a random 16-byte token combined with the current timestamp, then truncates to 16 hex characters. A separate URL-safe `tracking_code` is returned to the user for follow-up.
 - Never log or persist raw user identity alongside anonymous cases.
 
 ## Frontend (React / JSX)
