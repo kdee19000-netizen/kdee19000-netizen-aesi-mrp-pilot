@@ -88,10 +88,10 @@ def analyze_risk(input_text: str) -> Dict[str, any]:
     pass
 
 # Domain interface - all domain classes must implement:
-# - get_risk_patterns() -> Dict[str, List[str]]
-# - get_safe_response() -> str
-# - assign_responder(risk_level: str) -> str
-# - get_timeout_minutes(risk_level: str) -> int
+# - get_risk_patterns() -> Dict[DomainEnumType, List[str]]
+# - get_safe_response(risk_type) -> str
+# - assign_responder(risk_type) -> str
+# - get_timeout_minutes(risk_type) -> int
 ```
 
 ### React Code Style
@@ -129,28 +129,29 @@ export default ComponentName;
 ## Domain-Specific Patterns
 
 ### Risk Pattern Matching
-All domain `get_risk_patterns()` methods must return lowercase string patterns:
+All domain `get_risk_patterns()` methods must return lowercase string keyword lists keyed by a domain-specific `Enum` type:
 ```python
-def get_risk_patterns(self) -> Dict[str, List[str]]:
+def get_risk_patterns(self) -> Dict[SomeDomainRiskType, List[str]]:
     return {
-        "critical": ["threat", "weapon", "suicide", "harm"],
-        "high": ["harassment", "discrimination", "retaliation"],
-        "medium": ["hostile", "unfair", "unsafe"]
+        SomeDomainRiskType.THREAT: ["threat", "weapon", "harm"],
+        SomeDomainRiskType.HARASSMENT: ["harassment", "discrimination", "retaliation"],
+        SomeDomainRiskType.HOSTILE: ["hostile", "unfair", "unsafe"]
     }
 ```
 
 ### Domain Handler Interface
 Every domain class in `domains/` must implement these four methods:
-1. `get_risk_patterns()` - Returns risk level to keyword mapping
-2. `get_safe_response()` - Returns confirmation message
-3. `assign_responder(risk_level: str)` - Returns responder type
-4. `get_timeout_minutes(risk_level: str)` - Returns SLA timeout
+1. `get_risk_patterns()` - Returns `Dict[DomainEnumType, List[str]]` risk-type-to-keyword mapping
+2. `get_safe_response(risk_type)` - Returns confirmation message for the given risk type
+3. `assign_responder(risk_type)` - Returns responder type string
+4. `get_timeout_minutes(risk_type)` - Returns SLA timeout in minutes
 
 Reference: `BACKEND-FASTAPI/services/domain_router.py:44,58-60`
 
 ### Anonymous Reporting
 When handling anonymous reports:
-- Generate tracking code using `hashlib.sha256` with `secrets.token_hex(8)`
+- Generate anonymous ID using `hashlib.sha256` with `secrets.token_hex(16)` + timestamp
+- Generate user-facing tracking code using `secrets.token_urlsafe(16)`
 - Store hashed identifier instead of raw contact info
 - Return tracking code in response for follow-up
 - Pattern in `FRONTEND/src/components/enterprise/AnonymousReportForm.jsx`
@@ -250,7 +251,8 @@ Use conventional commits format:
 
 ### Data Privacy
 - Anonymous reports use hashed identifiers only
-- Tracking codes are SHA-256 hashes
+- Anonymous IDs are SHA-256 hashes (internal, not shown to users)
+- User-facing tracking codes use `secrets.token_urlsafe(16)` (not SHA-256)
 - Contact info is optional and handled carefully
 
 ### API Security
