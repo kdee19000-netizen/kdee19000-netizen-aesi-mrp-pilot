@@ -1,7 +1,7 @@
 # Core Framework
 fastapi==0.110.0
 uvicorn[standard]==0.27.0
-python-multipart==0.0.9
+python-multipart==0.0.22
 
 # Database
 sqlalchemy==2.0.25
@@ -14,7 +14,7 @@ celery==5.3.6
 flower==2.0.1
 
 # Security & Crypto
-cryptography==42.0.5
+cryptography==46.0.5
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 pycryptodome==3.20.0
@@ -39,7 +39,7 @@ python-telegram-bot==20.8
 # File Processing
 openpyxl==3.1.2
 reportlab==4.1.0
-pillow==10.2.0
+pillow==12.1.1
 
 # Utilities
 langdetect==1.0.9
