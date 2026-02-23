@@ -97,8 +97,15 @@ Failure to implement any of these four methods will cause a runtime error in `Do
 - Components live in `FRONTEND/src/components/enterprise/`.
 - Files use `.jsx` extension with named exports (`export const ComponentName`).
 - State is managed with React `useState` hooks; no Redux is currently used.
-- API calls go to `/api/enterprise/<domain>` matching the backend route prefix.
+- API calls use `/api/enterprise/<slug>` where the URL slug is defined per domain (see table below) and may differ from the domain key.
 
+#### Enterprise Domain Route Mapping
+
+| Domain key      | URL slug        | Example endpoint                     |
+|-----------------|-----------------|--------------------------------------|
+| `public_safety` | `public-safety` | `/api/enterprise/public-safety`      |
+
+When adding new domains, update this table with the correct slug so that frontend and backend stay aligned.
 ### API Request Shape
 ```json
 {
