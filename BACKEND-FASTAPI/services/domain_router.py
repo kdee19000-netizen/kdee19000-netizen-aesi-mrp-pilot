@@ -26,12 +26,7 @@ class DomainRouter:
         return cls.DOMAIN_MAP.get(domain_name)
 
     @classmethod
-    async def process_input(
-        cls,
-        text: str,
-        domain: str,
-        user_context: Dict
-    ) -> Dict:
+    async def process_input(cls, text: str, domain: str, user_context: Dict) -> Dict:
         """
         Unified processing across all domains
         """
@@ -66,5 +61,5 @@ class DomainRouter:
             "assigned_to": assigned_to,
             "timeout_minutes": timeout_minutes,
             "requires_mrp": True,
-            "domain": domain
+            "domain": domain,
         }
