@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import './AIGovernanceDashboard.css';
 
 /* --------------------------------------------------------------------------
@@ -144,6 +144,127 @@ async function fetchIncidents() {
   return BASE_INCIDENTS;
 }
 
+const BASE_POLICIES = [
+  {
+    id: 'pol-001',
+    type: 'decision_constraint',
+    title: 'Output Safety Gate',
+    description:
+      'All model outputs must pass the real-time safety intercept before delivery to end users.',
+    applies_to: ['unsafe_output', 'harmful_instruction'],
+    enforcement: 'automatic_block',
+    review_interval_days: 30,
+    status: 'active',
+  },
+  {
+    id: 'pol-002',
+    type: 'adjudication_policy',
+    title: 'Bias Escalation Protocol',
+    description:
+      'Detected bias incidents are escalated to the AI Ethics Reviewer within 60 minutes. Human adjudication required before model retrain.',
+    applies_to: ['bias_detected'],
+    enforcement: 'human_review',
+    review_interval_days: 7,
+    status: 'active',
+  },
+  {
+    id: 'pol-003',
+    type: 'decision_constraint',
+    title: 'PII Redaction Mandate',
+    description:
+      'Any output matching PII patterns is immediately redacted and the incident is logged to compliance.',
+    applies_to: ['privacy_leak'],
+    enforcement: 'automatic_block',
+    review_interval_days: 90,
+    status: 'active',
+  },
+  {
+    id: 'pol-004',
+    type: 'adjudication_policy',
+    title: 'Jailbreak Adjudication',
+    description:
+      'Prompt injection and jailbreak attempts trigger a compliance report and require ai_safety_team sign-off within 15 minutes.',
+    applies_to: ['jailbreak_attempt'],
+    enforcement: 'human_review',
+    review_interval_days: 14,
+    status: 'under_review',
+  },
+  {
+    id: 'pol-005',
+    type: 'decision_constraint',
+    title: 'Hallucination Disclosure',
+    description:
+      'Outputs flagged for hallucination must include a disclosure notice and be routed to fact-checking enhancement.',
+    applies_to: ['hallucination', 'misinformation'],
+    enforcement: 'disclosure_required',
+    review_interval_days: 60,
+    status: 'active',
+  },
+];
+
+const BASE_AUDIT_HISTORY = [
+  {
+    id: 'aud-001',
+    event_type: 'output_blocked',
+    risk_type: 'unsafe_output',
+    actor: 'ai_safety_team',
+    outcome:
+      'Output intercepted; safe fallback delivered to user. Incident escalated to compliance team.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
+    model_version: 'llm-v3.2.1',
+  },
+  {
+    id: 'aud-002',
+    event_type: 'policy_reviewed',
+    risk_type: 'bias_detected',
+    actor: 'ai_ethics_reviewer',
+    outcome:
+      'Bias analysis completed. Stereotype pattern confirmed. Retraining evaluation scheduled for next sprint.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
+    model_version: 'llm-v3.1.9',
+  },
+  {
+    id: 'aud-003',
+    event_type: 'jailbreak_blocked',
+    risk_type: 'jailbreak_attempt',
+    actor: 'ai_safety_team',
+    outcome:
+      'Prompt injection attempt detected and blocked. System prompt integrity verified. No data exposure.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 72).toISOString(),
+    model_version: 'llm-v3.2.1',
+  },
+  {
+    id: 'aud-004',
+    event_type: 'pii_redacted',
+    risk_type: 'privacy_leak',
+    actor: 'compliance_officer',
+    outcome:
+      'PII pattern redacted from model output. User notified of partial response. Compliance report filed.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 125).toISOString(),
+    model_version: 'llm-v3.2.0',
+  },
+  {
+    id: 'aud-005',
+    event_type: 'fact_check_queued',
+    risk_type: 'hallucination',
+    actor: 'ai_ethics_reviewer',
+    outcome:
+      'Hallucination flagged: non-existent source cited as fact. Disclosure notice added. Fact-checking enhancement queued.',
+    timestamp: new Date(Date.now() - 1000 * 60 * 200).toISOString(),
+    model_version: 'llm-v3.1.8',
+  },
+];
+
+async function fetchPolicies() {
+  await new Promise((r) => setTimeout(r, 280));
+  return BASE_POLICIES;
+}
+
+async function fetchAuditHistory() {
+  await new Promise((r) => setTimeout(r, 380));
+  return BASE_AUDIT_HISTORY;
+}
+
 /* --------------------------------------------------------------------------
    Utility helpers
    -------------------------------------------------------------------------- */
@@ -164,6 +285,221 @@ function maxRiskCount(breakdown) {
 /* --------------------------------------------------------------------------
    Sub-components
    -------------------------------------------------------------------------- */
+
+const POLICY_TYPE_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'decision_constraint', label: 'Decision Constraints' },
+  { value: 'adjudication_policy', label: 'Adjudication Policies' },
+];
+
+const AUDIT_EVENT_LABELS = {
+  output_blocked: 'Output Blocked',
+  policy_reviewed: 'Policy Reviewed',
+  jailbreak_blocked: 'Jailbreak Blocked',
+  pii_redacted: 'PII Redacted',
+  fact_check_queued: 'Fact-Check Queued',
+};
+
+function GovernancePolicies({ policies, loading }) {
+  const [typeFilter, setTypeFilter] = useState('all');
+
+  const filtered = useMemo(
+    () =>
+      typeFilter === 'all' ? policies : policies.filter((p) => p.type === typeFilter),
+    [policies, typeFilter]
+  );
+
+  const badgeClass = (type) => {
+    if (type === 'decision_constraint') return 'constraint';
+    if (type === 'adjudication_policy') return 'adjudication';
+    return 'disclosure';
+  };
+
+  const typeLabel = (type) => {
+    if (type === 'decision_constraint') return 'Decision Constraint';
+    if (type === 'adjudication_policy') return 'Adjudication Policy';
+    return type.replace(/_/g, ' ');
+  };
+
+  return (
+    <>
+      <div className="ag-filter-bar" role="group" aria-label="Filter policies by type">
+        {POLICY_TYPE_OPTIONS.map(({ value, label }) => (
+          <button
+            key={value}
+            className={`ag-filter-btn${typeFilter === value ? ' ag-filter-btn--active' : ''}`}
+            onClick={() => setTypeFilter(value)}
+            aria-pressed={typeFilter === value}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {loading && (
+        <div className="ag-empty" aria-live="polite" aria-label="Loading policies">
+          <span className="ag-spinner" aria-hidden="true" /> Loading policies…
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <p className="ag-empty">No policies match the current filter.</p>
+      )}
+
+      {!loading && filtered.length > 0 && (
+        <ul className="ag-policy-list" role="list" aria-label="Governance policies">
+          {filtered.map((policy) => (
+            <li
+              key={policy.id}
+              className="ag-policy-item"
+              role="listitem"
+              aria-label={policy.title}
+            >
+              <div className="ag-policy-item__header">
+                <span className={`ag-badge ag-badge--${badgeClass(policy.type)}`}>
+                  {typeLabel(policy.type)}
+                </span>
+                <span
+                  className={`ag-badge ag-badge--${policy.status === 'active' ? 'low' : 'medium'}`}
+                  aria-label={`Status: ${policy.status === 'active' ? 'Active' : 'Under Review'}`}
+                >
+                  {policy.status === 'active' ? 'Active' : 'Under Review'}
+                </span>
+              </div>
+              <h3 className="ag-policy-item__title">{policy.title}</h3>
+              <p className="ag-policy-item__description">{policy.description}</p>
+              <div className="ag-policy-item__meta">
+                <span>
+                  <strong>Enforcement:</strong> {policy.enforcement.replace(/_/g, ' ')}
+                </span>
+                <span>
+                  <strong>Review interval:</strong> every {policy.review_interval_days} days
+                </span>
+              </div>
+              <div className="ag-policy-item__applies" aria-label="Applies to risk types">
+                {policy.applies_to.map((rt) => (
+                  <span key={rt} className="ag-action-tag">
+                    {RISK_LABELS[rt] || rt}
+                  </span>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function AuditHistory({ history, loading }) {
+  const [riskFilter, setRiskFilter] = useState('all');
+  const [sortOrder, setSortOrder] = useState('newest');
+
+  const sorted = useMemo(() => {
+    const filtered =
+      riskFilter === 'all' ? history : history.filter((h) => h.risk_type === riskFilter);
+    return [...filtered].sort((a, b) => {
+      const diff = new Date(b.timestamp) - new Date(a.timestamp);
+      return sortOrder === 'newest' ? diff : -diff;
+    });
+  }, [history, riskFilter, sortOrder]);
+
+  if (loading) {
+    return (
+      <div className="ag-empty" aria-live="polite" aria-label="Loading audit history">
+        <span className="ag-spinner" aria-hidden="true" /> Loading audit history…
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="ag-filter-bar" role="group" aria-label="Filter and sort audit history">
+        <label className="ag-filter-bar__label" htmlFor="audit-risk-filter">
+          Risk type:
+        </label>
+        <select
+          id="audit-risk-filter"
+          className="ag-filter-select"
+          value={riskFilter}
+          onChange={(e) => setRiskFilter(e.target.value)}
+          aria-label="Filter audit history by risk type"
+        >
+          <option value="all">All risk types</option>
+          {Object.entries(RISK_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+
+        <label className="ag-filter-bar__label" htmlFor="audit-sort-order">
+          Sort:
+        </label>
+        <select
+          id="audit-sort-order"
+          className="ag-filter-select"
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value)}
+          aria-label="Sort audit history by time"
+        >
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+        </select>
+      </div>
+
+      {sorted.length === 0 && (
+        <p className="ag-empty">No audit records match the current filter.</p>
+      )}
+
+      {sorted.length > 0 && (
+        <ol className="ag-timeline" aria-label="Audit history log">
+          {sorted.map((entry) => {
+            const severity = RISK_SEVERITY[entry.risk_type] || 'info';
+            return (
+              <li
+                key={entry.id}
+                className="ag-timeline-item"
+                style={{ '--ag-dot-color': RISK_ACCENT_COLORS[severity] }}
+                aria-label={`Audit: ${AUDIT_EVENT_LABELS[entry.event_type] || entry.event_type}`}
+              >
+                <header className="ag-timeline-item__header">
+                  <span className="ag-timeline-item__risk">
+                    <span
+                      className={`ag-badge ag-badge--${severity}`}
+                      role="img"
+                      aria-label={`Severity: ${severity}`}
+                    >
+                      {severity}
+                    </span>{' '}
+                    {AUDIT_EVENT_LABELS[entry.event_type] || entry.event_type}
+                  </span>
+                  <time
+                    className="ag-timeline-item__time"
+                    dateTime={entry.timestamp}
+                    title={new Date(entry.timestamp).toLocaleString()}
+                  >
+                    {formatRelativeTime(entry.timestamp)}
+                  </time>
+                </header>
+                <p className="ag-timeline-item__summary">{entry.outcome}</p>
+                <p className="ag-audit-item__actor">
+                  <strong>Handled by:</strong> {entry.actor.replace(/_/g, ' ')}
+                  {entry.model_version && (
+                    <>
+                      {' · '}
+                      <strong>Model:</strong> {entry.model_version}
+                    </>
+                  )}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </>
+  );
+}
 
 function MetricCard({ label, value, delta, deltaDir, accentColor }) {
   return (
@@ -312,9 +648,13 @@ export const AIGovernanceDashboard = () => {
   const [metrics, setMetrics] = useState(null);
   const [breakdown, setBreakdown] = useState([]);
   const [incidents, setIncidents] = useState([]);
+  const [policies, setPolicies] = useState([]);
+  const [auditHistory, setAuditHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [refreshSeed, setRefreshSeed] = useState(0);
+  const [incidentSeverityFilter, setIncidentSeverityFilter] = useState('all');
+  const [incidentSortOrder, setIncidentSortOrder] = useState('newest');
 
   const mainRef = useRef(null);
   const liveRegionRef = useRef(null);
@@ -336,14 +676,18 @@ export const AIGovernanceDashboard = () => {
       setLoading(true);
       announce('Refreshing dashboard data…');
       try {
-        const [m, b, i] = await Promise.all([
+        const [m, b, i, p, a] = await Promise.all([
           fetchMetrics(seed),
           fetchRiskBreakdown(seed),
           fetchIncidents(),
+          fetchPolicies(),
+          fetchAuditHistory(),
         ]);
         setMetrics(m);
         setBreakdown(b);
         setIncidents(i);
+        setPolicies(p);
+        setAuditHistory(a);
         setLastUpdated(new Date());
         announce('Dashboard updated.');
       } catch {
@@ -396,6 +740,19 @@ export const AIGovernanceDashboard = () => {
     if (el) el.focus({ preventScroll: false });
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  const filteredSortedIncidents = useMemo(() => {
+    const filtered =
+      incidentSeverityFilter === 'all'
+        ? incidents
+        : incidents.filter(
+            (inc) => RISK_SEVERITY[inc.risk_type] === incidentSeverityFilter
+          );
+    return [...filtered].sort((a, b) => {
+      const diff = new Date(b.timestamp) - new Date(a.timestamp);
+      return incidentSortOrder === 'newest' ? diff : -diff;
+    });
+  }, [incidents, incidentSeverityFilter, incidentSortOrder]);
 
   const metricCards = metrics
     ? [
@@ -484,6 +841,8 @@ export const AIGovernanceDashboard = () => {
               { href: 'ag-metrics', label: 'Metrics' },
               { href: 'ag-risk-breakdown', label: 'Risk Breakdown' },
               { href: 'ag-timeline', label: 'Timeline' },
+              { href: 'ag-policies', label: 'Policies' },
+              { href: 'ag-audit', label: 'Audit' },
             ].map(({ href, label }) => (
               <li key={href} role="listitem">
                 <a
@@ -637,7 +996,86 @@ export const AIGovernanceDashboard = () => {
               {incidents.length} incidents
             </span>
           </header>
-          <IncidentTimeline incidents={incidents} loading={loading && incidents.length === 0} />
+          <div className="ag-filter-bar" role="group" aria-label="Filter and sort incidents">
+            <label className="ag-filter-bar__label" htmlFor="incident-severity-filter">
+              Severity:
+            </label>
+            <select
+              id="incident-severity-filter"
+              className="ag-filter-select"
+              value={incidentSeverityFilter}
+              onChange={(e) => setIncidentSeverityFilter(e.target.value)}
+              aria-label="Filter incidents by severity"
+            >
+              <option value="all">All</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <label className="ag-filter-bar__label" htmlFor="incident-sort-order">
+              Sort:
+            </label>
+            <select
+              id="incident-sort-order"
+              className="ag-filter-select"
+              value={incidentSortOrder}
+              onChange={(e) => setIncidentSortOrder(e.target.value)}
+              aria-label="Sort incidents by time"
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+          <IncidentTimeline
+            incidents={filteredSortedIncidents}
+            loading={loading && incidents.length === 0}
+          />
+        </section>
+
+        {/* ---- Governance policies section ---- */}
+        <section
+          id="ag-policies"
+          className="ag-section"
+          aria-labelledby="policies-heading"
+          role="region"
+        >
+          <header className="ag-section__header">
+            <h2 className="ag-section__title" id="policies-heading">
+              Governance Policies
+            </h2>
+            <span className="ag-badge ag-badge--info" aria-label={`${policies.length} policies`}>
+              {policies.length} policies
+            </span>
+          </header>
+          <GovernancePolicies
+            policies={policies}
+            loading={loading && policies.length === 0}
+          />
+        </section>
+
+        {/* ---- Audit history section ---- */}
+        <section
+          id="ag-audit"
+          className="ag-section"
+          aria-labelledby="audit-heading"
+          role="region"
+        >
+          <header className="ag-section__header">
+            <h2 className="ag-section__title" id="audit-heading">
+              Audit History
+            </h2>
+            <span
+              className="ag-badge ag-badge--info"
+              aria-label={`${auditHistory.length} audit records`}
+            >
+              {auditHistory.length} records
+            </span>
+          </header>
+          <AuditHistory
+            history={auditHistory}
+            loading={loading && auditHistory.length === 0}
+          />
         </section>
       </main>
     </div>

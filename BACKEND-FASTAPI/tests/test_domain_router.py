@@ -102,3 +102,84 @@ def test_workplace_get_timeout_minutes_threat_is_urgent():
 
 def test_workplace_assign_responder_threat():
     assert WorkplaceSafetyDomain.assign_responder(WorkplaceRiskType.THREATS) == "chief_hr_officer"
+
+
+# ── AIGovernanceDomain — governance policies & audit ─────────────────────────
+
+
+def test_ai_governance_get_governance_policies_returns_list():
+    policies = AIGovernanceDomain.get_governance_policies()
+    assert isinstance(policies, list)
+    assert len(policies) > 0
+
+
+def test_ai_governance_get_governance_policies_types():
+    policies = AIGovernanceDomain.get_governance_policies()
+    types = {p["type"] for p in policies}
+    assert "decision_constraint" in types
+    assert "adjudication_policy" in types
+
+
+def test_ai_governance_get_governance_policies_have_required_fields():
+    for policy in AIGovernanceDomain.get_governance_policies():
+        assert "id" in policy
+        assert "type" in policy
+        assert "title" in policy
+        assert "description" in policy
+        assert "applies_to" in policy
+        assert "enforcement" in policy
+        assert "status" in policy
+
+
+def test_ai_governance_create_audit_record_structure():
+    record = AIGovernanceDomain.create_audit_record(
+        event_type="output_blocked",
+        risk_type=AIRiskType.UNSAFE_OUTPUT,
+        actor="ai_safety_team",
+        outcome="Output intercepted and replaced with safe fallback.",
+    )
+    assert record["event_type"] == "output_blocked"
+    assert record["risk_type"] == AIRiskType.UNSAFE_OUTPUT
+    assert record["actor"] == "ai_safety_team"
+    assert isinstance(record["outcome"], str)
+
+
+# ── AIGovernanceDomain — action required & timeout ───────────────────────────
+
+
+def test_ai_governance_get_action_required_critical():
+    actions = AIGovernanceDomain.get_action_required([AIRiskType.UNSAFE_OUTPUT])
+    assert "immediate_model_review" in actions
+    assert "safety_filter_update" in actions
+    assert "incident_report_to_compliance" in actions
+
+
+def test_ai_governance_get_action_required_bias():
+    actions = AIGovernanceDomain.get_action_required([AIRiskType.BIAS_DETECTED])
+    assert "bias_analysis" in actions
+    assert "retraining_evaluation" in actions
+    assert "fairness_audit" in actions
+
+
+def test_ai_governance_get_action_required_hallucination():
+    actions = AIGovernanceDomain.get_action_required([AIRiskType.HALLUCINATION])
+    assert "fact_checking_layer_enhancement" in actions
+
+
+def test_ai_governance_get_timeout_minutes_non_critical():
+    assert AIGovernanceDomain.get_timeout_minutes(AIRiskType.BIAS_DETECTED) == 60
+    assert AIGovernanceDomain.get_timeout_minutes(AIRiskType.HALLUCINATION) == 60
+
+
+def test_ai_governance_create_governance_case_structure():
+    case = AIGovernanceDomain.create_governance_case(
+        model_output="harmful content",
+        user_query="generate harm",
+        risks=[AIRiskType.UNSAFE_OUTPUT],
+        model_version="llm-v1.0",
+    )
+    assert case["case_type"] == "ai_safety_violation"
+    assert case["model_version"] == "llm-v1.0"
+    assert AIRiskType.UNSAFE_OUTPUT in case["risks_detected"]
+    assert "action_required" in case
+    assert "timeout_minutes" in case
