@@ -133,4 +133,4 @@ When `anonymous: true` is set and the backend creates an MRP case, the response 
 
 - GitHub Actions workflow is defined in `.github/workflows/blank.yml`.
 - Before adding new backend logic, run existing tests (if present) with `pytest` from `BACKEND-FASTAPI/`.
-- Before adding new frontend logic, run `npm test` from `FRONTEND/`.
+- Frontend automated test tooling is not yet set up; once a `package.json` and test suite are added under `FRONTEND/`, update this section with the correct install and test commands.
