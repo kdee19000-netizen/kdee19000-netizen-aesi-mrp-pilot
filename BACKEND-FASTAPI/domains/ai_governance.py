@@ -40,6 +40,15 @@ class AIGovernanceDomain:
             AIRiskType.JAILBREAK_ATTEMPT: [
                 "ignore previous instructions", "system prompt is",
                 "bypass safety", "pretend you're not AI"
+            ],
+            AIRiskType.MISINFORMATION: [
+                "false claim", "fake news", "debunked study",
+                "conspiracy theory", "proven false"
+            ],
+            AIRiskType.MANIPULATION: [
+                "you must believe", "only i can tell you the truth",
+                "don't trust anyone else", "they are hiding this from you",
+                "act now before it's too late"
             ]
         }
 
@@ -96,7 +105,19 @@ class AIGovernanceDomain:
 
             AIRiskType.JAILBREAK_ATTEMPT:
                 "I'm designed to operate within my safety guidelines. "
-                "How can I help you with a legitimate request?"
+                "How can I help you with a legitimate request?",
+
+            AIRiskType.HALLUCINATION:
+                "I may have stated something inaccurate. "
+                "Please verify this information with a reliable source.",
+
+            AIRiskType.MISINFORMATION:
+                "I can't confirm that claim. "
+                "Please consult verified sources for accurate information.",
+
+            AIRiskType.MANIPULATION:
+                "I'm here to provide balanced, factual assistance. "
+                "Please be cautious of content that pressures you to act without reflection."
         }
         return fallbacks.get(risk_type, "I'm unable to provide that response.")
 
