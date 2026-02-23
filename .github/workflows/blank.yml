@@ -1,4 +1,4 @@
-# CI workflow – lint and test the AESI MRP backend
+# CI workflow - lint and test the AESI MRP backend
 
 name: CI
 
@@ -44,7 +44,7 @@ jobs:
       run:
         working-directory: BACKEND-FASTAPI
     env:
-      DATABASE_URL: sqlite:///:memory:
+      DATABASE_URL: "sqlite:///:memory:"
       SECRET_KEY: ci-test-secret-key
 
     steps:
@@ -59,4 +59,3 @@ jobs:
 
       - name: Run tests
         run: pytest tests/ -v
-
