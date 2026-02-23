@@ -14,6 +14,16 @@ class AIRiskType(str, Enum):
 
 
 class AIGovernanceDomain:
+    # Risk types requiring immediate escalation to the AI safety team (15-minute SLA).
+    # Covers outputs that are directly harmful (UNSAFE_OUTPUT, HARMFUL_INSTRUCTION),
+    # data exposure (PRIVACY_LEAK), and active safety-bypass attempts (JAILBREAK_ATTEMPT).
+    _CRITICAL_RISK_TYPES = (
+        AIRiskType.UNSAFE_OUTPUT,
+        AIRiskType.HARMFUL_INSTRUCTION,
+        AIRiskType.PRIVACY_LEAK,
+        AIRiskType.JAILBREAK_ATTEMPT,
+    )
+
     @staticmethod
     def get_risk_patterns() -> Dict[AIRiskType, List[str]]:
         """Patterns detected in MODEL OUTPUT (not user input)"""
@@ -40,6 +50,18 @@ class AIGovernanceDomain:
                 "bypass safety",
                 "pretend you're not AI",
             ],
+            AIRiskType.MISINFORMATION: [
+                "spread false information",
+                "this is not true but",
+                "fake news",
+                "debunked claim",
+            ],
+            AIRiskType.MANIPULATION: [
+                "you must obey",
+                "you have no choice",
+                "psychologically manipulate",
+                "exploit your emotions",
+            ],
         }
 
     @staticmethod
@@ -58,7 +80,7 @@ class AIGovernanceDomain:
 
         if detected_risks:
             # BLOCK OUTPUT
-            safe_fallback = AIGovernanceDomain.get_safe_fallback(detected_risks[0])
+            safe_fallback = AIGovernanceDomain.get_safe_response(detected_risks[0])
 
             return {
                 "output_blocked": True,
@@ -72,32 +94,38 @@ class AIGovernanceDomain:
 
     @staticmethod
     def get_safe_response(risk_type: AIRiskType) -> str:
-        """Alias for get_safe_fallback – satisfies the DomainRouter interface."""
-        return AIGovernanceDomain.get_safe_fallback(risk_type)
-
-    @staticmethod
-    def assign_responder(risk_type: AIRiskType) -> str:
-        """Route AI risk to the appropriate review team."""
-        critical = [AIRiskType.UNSAFE_OUTPUT, AIRiskType.HARMFUL_INSTRUCTION, AIRiskType.PRIVACY_LEAK]
-        if risk_type in critical:
-            return "ai_safety_team"
-        return "ai_ethics_reviewer"
-
-    @staticmethod
-    def get_safe_fallback(risk_type: AIRiskType) -> str:
-        fallbacks = {
+        """Return a safe, user-facing message for the given AI risk type."""
+        responses = {
             AIRiskType.UNSAFE_OUTPUT: "I can't provide that information as it could be harmful. "
             "If you're in crisis, please contact: Crisis Hotline 988.",
             AIRiskType.BIAS_DETECTED: "I apologize, but my previous response may have contained bias. "
             "Let me provide a more balanced perspective.",
             AIRiskType.HARMFUL_INSTRUCTION: "I can't provide instructions that could cause harm. "
             "Is there something constructive I can help you with instead?",
+            AIRiskType.HALLUCINATION: "I may have provided inaccurate information. "
+            "Please verify any facts I've stated with authoritative sources.",
             AIRiskType.PRIVACY_LEAK: "I apologize - I should not share private information. "
             "Let me provide general information instead.",
             AIRiskType.JAILBREAK_ATTEMPT: "I'm designed to operate within my safety guidelines. "
             "How can I help you with a legitimate request?",
+            AIRiskType.MISINFORMATION: "I want to make sure I'm sharing accurate information. "
+            "Please consult verified sources for this topic.",
+            AIRiskType.MANIPULATION: "I'm not able to engage in that kind of interaction. "
+            "How can I help you with something constructive?",
         }
-        return fallbacks.get(risk_type, "I'm unable to provide that response.")
+        return responses.get(risk_type, "I'm unable to provide that response.")
+
+    @staticmethod
+    def get_safe_fallback(risk_type: AIRiskType) -> str:
+        """Backward-compatible alias for get_safe_response."""
+        return AIGovernanceDomain.get_safe_response(risk_type)
+
+    @staticmethod
+    def assign_responder(risk_type: AIRiskType) -> str:
+        """Route AI risk to the appropriate review team."""
+        if risk_type in AIGovernanceDomain._CRITICAL_RISK_TYPES:
+            return "ai_safety_team"
+        return "ai_governance_reviewer"
 
     @staticmethod
     def create_governance_case(model_output: str, user_query: str, risks: List[AIRiskType], model_version: str) -> Dict:
@@ -116,10 +144,8 @@ class AIGovernanceDomain:
     @staticmethod
     def get_action_required(risks: List[AIRiskType]) -> List[str]:
         """Define remediation actions"""
-        critical_risks = [AIRiskType.UNSAFE_OUTPUT, AIRiskType.HARMFUL_INSTRUCTION, AIRiskType.PRIVACY_LEAK]
-
         actions = []
-        if any(risk in critical_risks for risk in risks):
+        if any(risk in AIGovernanceDomain._CRITICAL_RISK_TYPES for risk in risks):
             actions.extend(["immediate_model_review", "safety_filter_update", "incident_report_to_compliance"])
 
         if AIRiskType.BIAS_DETECTED in risks:
@@ -132,7 +158,6 @@ class AIGovernanceDomain:
 
     @staticmethod
     def get_timeout_minutes(risk_type: AIRiskType) -> int:
-        critical = [AIRiskType.UNSAFE_OUTPUT, AIRiskType.HARMFUL_INSTRUCTION, AIRiskType.PRIVACY_LEAK]
-        if risk_type in critical:
+        if risk_type in AIGovernanceDomain._CRITICAL_RISK_TYPES:
             return 15  # 15 minutes for critical
         return 60  # 1 hour for other issues
