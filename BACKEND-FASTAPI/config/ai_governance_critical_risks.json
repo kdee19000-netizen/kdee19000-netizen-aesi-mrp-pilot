@@ -1,0 +1,8 @@
+{
+    "critical_risk_types": [
+        "unsafe_output",
+        "harmful_instruction",
+        "privacy_leak",
+        "jailbreak_attempt"
+    ]
+}
