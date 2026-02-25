@@ -1,12 +1,14 @@
 """Unit tests for DomainRouter and individual domain classes."""
 
+import json
+import logging
 import pytest
 
 from services.domain_router import DomainRouter
 from domains.workplace import WorkplaceSafetyDomain, WorkplaceRiskType
 from domains.public_safety import PublicSafetyRiskType
 from domains.commerce import CommerceRiskType
-from domains.ai_governance import AIGovernanceDomain, AIRiskType
+from domains.ai_governance import AIGovernanceDomain, AIRiskType, _load_critical_risk_types
 
 # ── DomainRouter tests ────────────────────────────────────────────────────────
 
@@ -144,3 +146,92 @@ def test_workplace_get_timeout_minutes_threat_is_urgent():
 
 def test_workplace_assign_responder_threat():
     assert WorkplaceSafetyDomain.assign_responder(WorkplaceRiskType.THREATS) == "chief_hr_officer"
+
+
+# ── AIGovernanceDomain – dynamic config loading ───────────────────────────────
+
+
+def test_load_critical_risk_types_from_valid_json(tmp_path):
+    cfg = tmp_path / "risks.json"
+    cfg.write_text(json.dumps({"critical_risk_types": [AIRiskType.UNSAFE_OUTPUT.value, AIRiskType.PRIVACY_LEAK.value]}))
+    result = _load_critical_risk_types(str(cfg))
+    assert result == (AIRiskType.UNSAFE_OUTPUT, AIRiskType.PRIVACY_LEAK)
+
+
+def test_load_critical_risk_types_fallback_on_missing_file(tmp_path):
+    result = _load_critical_risk_types(str(tmp_path / "nonexistent.json"))
+    assert AIRiskType.UNSAFE_OUTPUT in result
+    assert AIRiskType.JAILBREAK_ATTEMPT in result
+
+
+def test_load_critical_risk_types_fallback_on_invalid_json(tmp_path):
+    cfg = tmp_path / "risks.json"
+    cfg.write_text("not valid json")
+    result = _load_critical_risk_types(str(cfg))
+    assert AIRiskType.UNSAFE_OUTPUT in result
+
+
+def test_load_critical_risk_types_fallback_on_unknown_value(tmp_path):
+    cfg = tmp_path / "risks.json"
+    cfg.write_text(json.dumps({"critical_risk_types": ["unknown_risk"]}))
+    result = _load_critical_risk_types(str(cfg))
+    assert AIRiskType.UNSAFE_OUTPUT in result
+
+
+def test_reload_critical_risk_types_updates_class_attribute(tmp_path):
+    cfg = tmp_path / "risks.json"
+    cfg.write_text(json.dumps({"critical_risk_types": [AIRiskType.BIAS_DETECTED.value]}))
+    original = AIGovernanceDomain._CRITICAL_RISK_TYPES
+    try:
+        AIGovernanceDomain.reload_critical_risk_types(str(cfg))
+        assert AIGovernanceDomain._CRITICAL_RISK_TYPES == (AIRiskType.BIAS_DETECTED,)
+    finally:
+        AIGovernanceDomain._CRITICAL_RISK_TYPES = original
+
+
+# ── AIGovernanceDomain – error handling for invalid risk_type ─────────────────
+
+
+def test_assign_responder_raises_on_invalid_risk_type():
+    with pytest.raises(ValueError, match="Unsupported risk_type"):
+        AIGovernanceDomain.assign_responder("not_a_risk_type")  # type: ignore[arg-type]
+
+
+def test_get_safe_response_raises_on_invalid_risk_type():
+    with pytest.raises(ValueError, match="Unsupported risk_type"):
+        AIGovernanceDomain.get_safe_response(42)  # type: ignore[arg-type]
+
+
+def test_get_timeout_minutes_raises_on_invalid_risk_type():
+    with pytest.raises(ValueError, match="Unsupported risk_type"):
+        AIGovernanceDomain.get_timeout_minutes(None)  # type: ignore[arg-type]
+
+
+# ── AIGovernanceDomain – logging ──────────────────────────────────────────────
+
+
+def test_assign_responder_logs_warning_for_invalid_risk_type(caplog):
+    with caplog.at_level(logging.WARNING, logger="domains.ai_governance"):
+        with pytest.raises(ValueError):
+            AIGovernanceDomain.assign_responder("bad_value")  # type: ignore[arg-type]
+    assert any("unsupported risk_type" in record.message.lower() for record in caplog.records)
+
+
+def test_assign_responder_logs_info_for_valid_risk_type(caplog):
+    with caplog.at_level(logging.INFO, logger="domains.ai_governance"):
+        AIGovernanceDomain.assign_responder(AIRiskType.JAILBREAK_ATTEMPT)
+    assert any("ai_safety_team" in record.message for record in caplog.records)
+
+
+def test_get_timeout_minutes_logs_warning_for_invalid_risk_type(caplog):
+    with caplog.at_level(logging.WARNING, logger="domains.ai_governance"):
+        with pytest.raises(ValueError):
+            AIGovernanceDomain.get_timeout_minutes("bad_value")  # type: ignore[arg-type]
+    assert any("unsupported risk_type" in record.message.lower() for record in caplog.records)
+
+
+def test_get_safe_response_logs_warning_for_invalid_risk_type(caplog):
+    with caplog.at_level(logging.WARNING, logger="domains.ai_governance"):
+        with pytest.raises(ValueError):
+            AIGovernanceDomain.get_safe_response("bad_value")  # type: ignore[arg-type]
+    assert any("unsupported risk_type" in record.message.lower() for record in caplog.records)
