@@ -5,6 +5,8 @@ __pycache__/
 
 # Environment variables
 .env
+secrets.json
+config.json
 
 # Docker
 *.dockerignore
@@ -18,3 +20,11 @@ Dockerfile
 # Keys
 *.pem
 *.key
+
+# Logs
+*.log
+logs/
+
+# Testing outputs
+*.testlog
+coverage/
